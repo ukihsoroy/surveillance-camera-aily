@@ -2,7 +2,7 @@ from typing import List
 
 from basic.lark.base import batch_get_records
 from basic.model.camera import Camera
-from scheduler.tasks import screenshot_camera
+from scheduler.tasks import screenshot_camera, key_frame_camera
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from basic.util.configurator import get_env
@@ -21,13 +21,21 @@ if __name__ == '__main__':
 
     for camera in cameras:
         print(camera.frequency, camera.count, camera.code, camera.link)
-        scheduler.add_job(
-            screenshot_camera,
-            "interval",
-            seconds=camera.frequency,
-            max_instances=5,
-            args=(app_id, app_secret, app, skill, path, camera)
-        )
+        if camera.key_frames == "开启":
+            scheduler.add_job(
+                key_frame_camera,
+                "date",
+                args=(app_id, app_secret, app, skill, path, camera)
+            )
+        else:
+            scheduler.add_job(
+                screenshot_camera,
+                "interval",
+                seconds=camera.frequency,
+                max_instances=5,
+                args=(app_id, app_secret, app, skill, path, camera)
+            )
+
 
     try:
         print("启动间隔调度器...")
