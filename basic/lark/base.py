@@ -169,5 +169,5 @@ def insert_records(app_token, table_id, records, token):
 
 
 if __name__ == '__main__':
-    r = batch_get_records("cli_a82797a53f67500e", "58uxb07v8buOVenkcRDRKo0M7k3ohgDN", "A4mTbsRreagi4AsZJAicx1eynZb", "tblfvjN6sZrYBUuc", page_token=None)
+    r = batch_get_records("cli_a82797a53f67500e", "", "A4mTbsRreagi4AsZJAicx1eynZb", "tblfvjN6sZrYBUuc", page_token=None)
     print(r)

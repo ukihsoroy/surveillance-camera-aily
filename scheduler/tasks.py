@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from basic.lark.aily import upload_file, run_aily_skill
-from basic.lark.token import get_tenant_token
+from basic.lark.tokens import get_tenant_token
 from basic.model.camera import Camera
 from channel.yolo.yolov5 import identify
 from source.surveillance import camera_screen

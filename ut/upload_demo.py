@@ -1,5 +1,5 @@
 from basic.lark.aily import *
-from basic.lark.token import get_tenant_token
+from basic.lark.tokens import get_tenant_token
 from source.surveillance import *
 from source.screenshot import *
 

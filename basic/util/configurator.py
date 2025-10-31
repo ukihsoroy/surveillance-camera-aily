@@ -16,4 +16,8 @@ def get_env():
     # 本地文件夹目录地址
     path = config['app']['path']
 
-    return app_id, app_secret, base_token, table_id, app, skill, path
+    # apaas的client id、secret
+    client_id = config['apaas']['client_id']
+    client_secret = config['apaas']['client_secret']
+
+    return app_id, app_secret, base_token, table_id, app, skill, path, client_id, client_secret
