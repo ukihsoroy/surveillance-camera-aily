@@ -5,11 +5,11 @@ from basic.model.camera import Camera
 from scheduler.tasks import screenshot_camera, key_frame_camera
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-from basic.util.configurator import get_env
+from basic.util.configurator import get_aily_env, get_apaas_env
 
 # 启动应用
 if __name__ == '__main__':
-    app_id, app_secret, base_token, table_id, app, skill, path = get_env()
+    app_id, app_secret, base_token, table_id, app, skill, path = get_aily_env()
 
     # 获取监控配置信息
     cameras: List[Camera] = batch_get_records(app_id, app_secret, base_token, table_id)
