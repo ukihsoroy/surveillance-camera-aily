@@ -169,5 +169,7 @@ def insert_records(app_token, table_id, records, token):
 
 
 if __name__ == '__main__':
-    r = batch_get_records("cli_a82797a53f67500e", "", "A4mTbsRreagi4AsZJAicx1eynZb", "tblfvjN6sZrYBUuc", page_token=None)
-    print(r)
+    # 示例代码，实际使用时请从配置文件获取相关参数
+    # r = batch_get_records("your_app_id_here", "your_app_secret_here", "your_base_id_here", "your_table_id_here")
+    # print(r)
+    pass

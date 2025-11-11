@@ -69,4 +69,6 @@ def run_aily_skill_batch_file(app, skill, file_tokens, check_point, token):
 
 
 if __name__ == '__main__':
-    upload_file(token="t-g104a4eKGXSYS7GWYXCFG4RDPUZMTOR4RNDYQ2LY", path="../screenshot/screenshot_1759561764.png")
+    # 示例代码，实际使用时请从配置文件获取token和路径
+    # upload_file(token="your_token_here", filename="your_file_path_here")
+    pass

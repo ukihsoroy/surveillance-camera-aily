@@ -34,5 +34,7 @@ def get_apaas_token(client_id, client_secret):
 
 
 if __name__ == '__main__':
-    token = get_apaas_token('c_e373afff7d864b2294ad', '')
-    print(token)
+    # 示例代码，实际使用时请从配置文件获取client_id和client_secret
+    # token = get_apaas_token('your_client_id_here', 'your_client_secret_here')
+    # print(token)
+    pass
