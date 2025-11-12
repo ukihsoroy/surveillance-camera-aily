@@ -18,21 +18,6 @@ def get_tenant_token(app_id, app_secret):
     return response.json()['tenant_access_token']
 
 
-def get_apaas_token(client_id, client_secret):
-    url = "https://ae-openapi.feishu.cn/auth/v1/appToken"
-    payload = {
-        "clientId": client_id,
-        "clientSecret": client_secret
-    }
-    headers = {
-        "Content-Type": "application/json"
-    }
-
-    response = requests.request("POST", url, headers=headers, data=json.dumps(payload).encode('utf-8'))
-
-    return response.json()['data']['accessToken']
-
-
 if __name__ == '__main__':
-    token = get_apaas_token('c_e373afff7d864b2294ad', '')
+    token = get_tenant_token('cli_a82797a53f67500e', '')
     print(token)

@@ -1,6 +1,5 @@
 class Camera:
-    def __init__(self, record_id, code, link, frequency, count, key_frames, classes):
-        self.record_id = record_id
+    def __init__(self, code, link, frequency, count, key_frames, classes):
         self.code = code
         self.link = link
         self.frequency = frequency
