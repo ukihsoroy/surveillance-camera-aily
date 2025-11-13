@@ -7,6 +7,7 @@ import pyautogui
 #输入是截图保存地址
 #输出是截图文件名
 def fullscreen(path='./screenshot/', region=None):
+    # 注意：在实际使用中，path参数应该从配置文件中获取，此处仅为默认值
     # 确保截图目录存在
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
