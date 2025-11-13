@@ -1,3 +1,4 @@
+import os
 import random
 import time
 import pyautogui
@@ -5,7 +6,12 @@ import pyautogui
 #截取屏幕
 #输入是截图保存地址
 #输出是截图文件名
-def fullscreen(path, region=None):
+def fullscreen(path='./screenshot/', region=None):
+    # 确保截图目录存在
+    if not os.path.exists(path):
+        os.makedirs(path, exist_ok=True)
+        print(f"创建截图目录: {path}")
+    
     # 截取整个屏幕
     if region is None:
         screenshot = pyautogui.screenshot()
@@ -18,15 +24,16 @@ def fullscreen(path, region=None):
     random_num = random.randint(0, 1000000)
     r = str(time.time()) + str(random_num)
 
-    #filename
-    name = path + 'screenshot_{}.png'.format(r)
+    #filename - 使用os.path.join确保路径正确拼接
+    filename = f'screenshot_{r}.png'
+    name = os.path.join(path, filename)
 
     # 保存截图
     screenshot.save(name)
+    print(f"截图已保存: {name}")
 
     return name
 
 if __name__ == '__main__':
     name = fullscreen()
-
     print(name)

@@ -26,7 +26,7 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
         .page_token("" if page_token is None else page_token) \
         .page_size(10) \
         .request_body(SearchAppTableRecordRequestBody.builder()
-            .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集"])
+            .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集", "上班时间", "下班时间"])
             .automatic_fields(True)
             .filter(FilterInfo.builder()
                .conjunction("and")
@@ -52,7 +52,6 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
     if response.data is not None and response.data.items is not None:
         for item in response.data.items:
             camera = Camera(
-                record_id=item.record_id,
                 code=item.fields.get("编码")[0]["text"],
                 link=item.fields.get("link"),
                 frequency=item.fields.get("频率"),
@@ -60,6 +59,11 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
                 key_frames=item.fields.get("关键帧"),
                 classes=convert_classes(item.fields.get("检测集"))
             )
+            # 将record_id存储为实例属性，以便后续使用
+            camera.record_id = item.record_id
+            # 存储上班时间和下班时间
+            camera.start_time = item.fields.get("上班时间")
+            camera.end_time = item.fields.get("下班时间")
             cameras.append(camera)
 
     return cameras
