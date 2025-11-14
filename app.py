@@ -1,5 +1,7 @@
 from typing import List
 
+from apscheduler.executors.pool import ThreadPoolExecutor
+
 from basic.lark.base import batch_get_records
 from basic.model.camera import Camera
 from scheduler.tasks import screenshot_camera, key_frame_camera
@@ -14,8 +16,13 @@ if __name__ == '__main__':
     # 获取监控配置信息
     cameras: List[Camera] = batch_get_records(app_id, app_secret, base_token, table_id)
 
+    # 配置线程池，设置更大的容量（例如 20 个线程）
+    executors = {
+        'default': ThreadPoolExecutor(20)  # 调整此处数值
+    }
+
     # 创建调度器（BlockingScheduler会阻塞主线程）
-    scheduler = BlockingScheduler()
+    scheduler = BlockingScheduler(executors=executors)
 
     print(len(cameras))
 
@@ -33,6 +40,7 @@ if __name__ == '__main__':
                 "interval",
                 seconds=camera.frequency,
                 max_instances=5,
+                misfire_grace_time=300,
                 args=(app_id, app_secret, app, skill, path, camera)
             )
 

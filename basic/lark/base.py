@@ -24,7 +24,7 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
         .table_id(table_id) \
         .user_id_type("open_id") \
         .page_token("" if page_token is None else page_token) \
-        .page_size(10) \
+        .page_size(100) \
         .request_body(SearchAppTableRecordRequestBody.builder()
             .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集"])
             .automatic_fields(True)
@@ -52,7 +52,6 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
     if response.data is not None and response.data.items is not None:
         for item in response.data.items:
             camera = Camera(
-                record_id=item.record_id,
                 code=item.fields.get("编码")[0]["text"],
                 link=item.fields.get("link"),
                 frequency=item.fields.get("频率"),
