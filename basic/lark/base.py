@@ -24,9 +24,9 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
         .table_id(table_id) \
         .user_id_type("open_id") \
         .page_token("" if page_token is None else page_token) \
-        .page_size(100) \
+        .page_size(10) \
         .request_body(SearchAppTableRecordRequestBody.builder()
-            .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集"])
+            .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集", "上班时间", "下班时间"])
             .automatic_fields(True)
             .filter(FilterInfo.builder()
                .conjunction("and")
@@ -59,6 +59,11 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
                 key_frames=item.fields.get("关键帧"),
                 classes=convert_classes(item.fields.get("检测集"))
             )
+            # 将record_id存储为实例属性，以便后续使用
+            camera.record_id = item.record_id
+            # 存储上班时间和下班时间
+            camera.start_time = item.fields.get("上班时间")
+            camera.end_time = item.fields.get("下班时间")
             cameras.append(camera)
 
     return cameras
@@ -80,91 +85,144 @@ def convert_classes(classes):
 
 
 
-def upload_media(base_token ,token):
-    file_path = "path/demo.jpeg"
-    file_size = os.path.getsize(file_path)
-    url = "https://open.feishu.cn/open-apis/drive/v1/medias/upload_all"
-    form = {
-        'file_name': 'demo.jpeg',
-        'parent_type': 'doc_image',
-        'parent_node': base_token,
-        'size': str(file_size),
-        'file': (open(file_path, 'rb'))
-    }
-    multi_form = MultipartEncoder(form)
-    headers = {'Authorization': f'Bearer {token}', 'Content-Type': multi_form.content_type}
-    response = requests.request("POST", url, headers=headers, data=multi_form)
-    return response.json()['data']['file_token']
-
-
-def insert_records(app_token, table_id, records, token):
-    url = f"https://open.larkoffice.com/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records"
-
-    payload = json.dumps({
-        "fields": {
-            "人员": [
-                {
-                    "id": "ou_2910013f1e6456f16a0ce75ede9abcef"
-                },
-                {
-                    "id": "ou_e04138c9633dd0d2ea166d79f54abcef"
-                }
-            ],
-            "任务名称": "拜访潜在客户",
-            "单向关联": [
-                "recHTLvO7x",
-                "recbS8zb2m"
-            ],
-            "单选": "选项1",
-            "双向关联": [
-                "recHTLvO7x",
-                "recbS8zb2m"
-            ],
-            "地理位置": "116.397755,39.903179",
-            "复选框": True,
-            "多选": [
-                "选项1",
-                "选项2"
-            ],
-            "工时": 10,
-            "日期": 1674206443000,
-            "条码": "+$$3170930509104X512356",
-            "电话号码": "1302616xxxx",
-            "群组": [
-                {
-                    "id": "oc_cd07f55f14d6f4a4f1b51504e7e97f48"
-                }
-            ],
-            "评分": 3,
-            "货币": 3,
-            "超链接": {
-                "link": "https://www.feishu.cn/product/base",
-                "text": "飞书多维表格官网"
-            },
-            "进度": 0.25,
-            "附件": [
-                {
-                    "file_token": "DRiFbwaKsoZaLax4WKZbEGCccoe"
-                },
-                {
-                    "file_token": "BZk3bL1Enoy4pzxaPL9bNeKqcLe"
-                },
-                {
-                    "file_token": "EmL4bhjFFovrt9xZgaSbjJk9c1b"
-                },
-                {
-                    "file_token": "Vl3FbVkvnowlgpxpqsAbBrtFcrd"
-                }
-            ]
+def upload_media(file_path, parent_type, parent_node, token):
+    """
+    上传文件到飞书媒体库
+    参考：https://open.feishu.cn/document/server-docs/docs/drive-v1/media/upload_all
+    
+    Args:
+        file_path: 本地文件路径
+        parent_type: 上传点类型，如'docx_image', 'docx_file'等
+        parent_node: 上传点token，即要上传的云文档的token
+        token: access_token
+        
+    Returns:
+        file_token: 上传成功后的文件token
+    """
+    try:
+        file_size = os.path.getsize(file_path)
+        # 检查文件大小是否超过20MB限制
+        if file_size > 20 * 1024 * 1024:
+            print(f"[错误] 文件大小超过20MB限制: {file_size/1024/1024:.2f}MB")
+            return None
+            
+        url = "https://open.feishu.cn/open-apis/drive/v1/medias/upload_all"
+        form = {
+            'file_name': os.path.basename(file_path),
+            'parent_type': parent_type,
+            'parent_node': parent_node,
+            'size': str(file_size),
+            'file': (open(file_path, 'rb'))
         }
+        multi_form = MultipartEncoder(form)
+        headers = {'Authorization': f'Bearer {token}', 'Content-Type': multi_form.content_type}
+        response = requests.request("POST", url, headers=headers, data=multi_form)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('code') == 0:
+                return result['data']['file_token']
+            else:
+                print(f"[错误] 上传文件失败: {result.get('msg', '未知错误')}")
+        else:
+            print(f"[错误] 上传文件HTTP失败: {response.status_code}, {response.text}")
+    except Exception as e:
+        print(f"[异常] 上传文件时发生错误: {str(e)}")
+    finally:
+        # 确保文件被关闭
+        if 'form' in locals() and 'file' in form:
+            form['file'].close()
+    return None
 
-    })
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {token}',
-    }
+def create_record(app_token, table_id, fields, token):
+    """
+    在多维表格中新增一条记录
+    参考：https://open.feishu.cn/document/server-docs/docs/bitable-v1/app-table-record/create
+    
+    Args:
+        app_token: 多维表格App的唯一标识
+        table_id: 多维表格数据表的唯一标识
+        fields: 要新增的记录数据，格式为字典
+        token: access_token
+        
+    Returns:
+        record_id: 创建成功后的记录ID，失败返回None
+    """
+    try:
+        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records"
+        
+        payload = json.dumps({
+            "fields": fields
+        })
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {token}',
+        }
+        
+        response = requests.request("POST", url, headers=headers, data=payload)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('code') == 0 and result.get('data'):
+                return result['data']['record']['record_id']
+            else:
+                print(f"[错误] 创建记录失败: {result.get('msg', '未知错误')}")
+        else:
+            print(f"[错误] 创建记录HTTP失败: {response.status_code}, {response.text}")
+    except Exception as e:
+        print(f"[异常] 创建记录时发生错误: {str(e)}")
+    return None
 
-    response = requests.request("POST", url, headers=headers, data=payload)
+def batch_update_records(app_token, table_id, records, token):
+    """
+    批量更新多维表格中的记录
+    参考：https://go.feishu.cn/s/61Y-IrQjY02
+    
+    Args:
+        app_token: 多维表格App的唯一标识
+        table_id: 多维表格数据表的唯一标识
+        records: 要更新的记录列表，每条记录包含record_id和fields
+        token: access_token
+        
+    Returns:
+        success: 更新是否成功
+    """
+    try:
+        url = f"https://open.feishu.cn/open-apis/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_update"
+        
+        payload = json.dumps({
+            "records": records
+        })
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {token}',
+        }
+        
+        response = requests.request("POST", url, headers=headers, data=payload)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('code') == 0:
+                return True
+            else:
+                print(f"[错误] 批量更新记录失败: {result.get('msg', '未知错误')}")
+        else:
+            print(f"[错误] 批量更新记录HTTP失败: {response.status_code}, {response.text}")
+    except Exception as e:
+        print(f"[异常] 批量更新记录时发生错误: {str(e)}")
+    return False
+
+
+
+
+# 保留兼容性的insert_records函数，现在使用create_record函数实现
+def insert_records(app_token, table_id, fields, token):
+    """
+    插入记录到多维表格（兼容旧接口）
+    """
+    return create_record(app_token, table_id, fields, token)
 
 
 if __name__ == '__main__':
