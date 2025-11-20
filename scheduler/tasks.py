@@ -67,7 +67,7 @@ def is_work_time(start_time, end_time):
 
 
 # 批量截取图片
-def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, record_table_id, use_aily=True):
+def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily=True):
     # 检查工作时间
     if not is_work_time(camera.start_time, camera.end_time):
         print(f"[{get_timestamp()}] 摄像头 {camera.code} 非工作时间，跳过执行截图任务")

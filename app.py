@@ -87,7 +87,7 @@ if __name__ == '__main__':
             scheduler.add_job(
                 key_frame_camera,
                 "date",
-                args=(app_id, app_secret, app, skill, path, camera, record_table_id, True)
+                args=(app_id, app_secret, app, skill, path, camera, True)
             )
         else:
             # 普通摄像头添加定时任务
@@ -95,7 +95,7 @@ if __name__ == '__main__':
                 screenshot_camera,
                 "interval",
                 seconds=camera.frequency,
-                args=(app_id, app_secret, app, skill, path, camera, record_table_id, True),  # 设置为使用多维表格
+                args=(app_id, app_secret, app, skill, path, camera, True),  # 设置为使用多维表格
                 max_instances=5,
                 misfire_grace_time=300
         )
