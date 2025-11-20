@@ -8,6 +8,8 @@ from basic.lark.tokens import get_tenant_token
 from basic.model.camera import Camera
 from channel.yolo.yolov5 import identify
 from source.screenshot import fullscreen
+from source.surveillance import camera_screen
+
 
 def get_timestamp():
     """获取格式化的时间戳，用于日志输出"""
@@ -65,7 +67,7 @@ def is_work_time(start_time, end_time):
 
 
 # 批量截取图片
-def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily=True):
+def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, record_table_id, use_aily=True):
     # 检查工作时间
     if not is_work_time(camera.start_time, camera.end_time):
         print(f"[{get_timestamp()}] 摄像头 {camera.code} 非工作时间，跳过执行截图任务")
@@ -78,9 +80,9 @@ def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Ca
     # 循环几次
     for i in range(camera.count):
         # 截取图片
-        # file_name = camera_screen(camera.link, path)
+        file_name = camera_screen(camera.link, path)
 
-        file_name = fullscreen(path)
+        # file_name = fullscreen(path)
         print(file_name)
 
         # 根据参数决定是上传到aily还是保存文件路径
@@ -102,17 +104,15 @@ def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Ca
         # 上传到多维表格
         from basic.util.configurator import get_aily_env
         # 获取配置信息，特别是多维表格的token
-        _, _, base_token, table_id, _, _, _ = get_aily_env()
-        
-        # 修正：使用正确的 table_id
-        table_id = "tblLfEZ1QJmoKN9k"
+        _, _, base_token, camera_table_id, record_table_id, _, _ = get_aily_env()
+
         
         print(f"[{get_timestamp()}] 将图片上传到多维表格")
         for file_name in filenames:
             # 使用我们测试成功的新方法
             success = upload_image_to_bitable(
                 base_token,  # 多维表格的 app_token
-                table_id,    # 正确的 table_id
+                record_table_id,    # 正确的 table_id
                 file_name,   # 图片路径
                 token,       # tenant_access_token
                 camera.record_id  # 关联的巡检点位 record_id
@@ -261,8 +261,8 @@ def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Cam
             continue
             
         # 截取图片
-        # file_name = camera_screen(camera.link, path)
-        file_name = fullscreen(path)
+        file_name = camera_screen(camera.link, path)
+        # file_name = fullscreen(path)
         count = identify(file_name, camera.classes)
         print(f"检测到 {count} 个目标")
         print(file_name)
@@ -280,13 +280,16 @@ def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Cam
                 from basic.lark.base import update_record_with_file
                 from basic.util.configurator import get_aily_env
                 # 获取配置信息，特别是多维表格的token
-                _, _, base_token, table_id, _, _, _ = get_aily_env()
+                # 上传到多维表格
+                from basic.util.configurator import get_aily_env
+                # 获取配置信息，特别是多维表格的token
+                _, _, base_token, camera_table_id, record_table_id, _, _ = get_aily_env()
                 print(f"[{get_timestamp()}] 将关键帧图片上传到多维表格，记录ID: {camera.record_id}")
                 camera.frames_count = count
                 # 使用配置文件中的base_token和table_id
                 success = update_record_with_file(
                     base_token,  # 使用多维表格的token
-                    table_id,  # 使用配置文件中的table_id
+                    camera_table_id,  # 使用配置文件中的table_id
                     camera.record_id,
                     "照片",  # 多维表格中的附件字段名称
                     file_name,

@@ -7,7 +7,7 @@ from basic.model.camera import Camera
 from scheduler.tasks import screenshot_camera, key_frame_camera
 from apscheduler.schedulers.blocking import BlockingScheduler
 
-from basic.util.configurator import get_aily_env, get_apaas_env
+from basic.util.configurator import get_aily_env
 
 def get_timestamp():
     """获取格式化的时间戳，用于日志输出"""
@@ -32,7 +32,6 @@ def is_work_time(start_time, end_time):
     # 获取当前时间
     now = datetime.datetime.now()
     current_time = now.time()
-    
     try:
         # 解析时间戳，支持毫秒和秒级
         try:
@@ -65,10 +64,10 @@ def is_work_time(start_time, end_time):
 
 # 启动应用
 if __name__ == '__main__':
-    app_id, app_secret, base_token, table_id, app, skill, path = get_aily_env()
+    app_id, app_secret, base_token, camera_table_id, record_table_id, app, skill, path = get_aily_env()
 
     # 获取监控配置信息
-    cameras: List[Camera] = batch_get_records(app_id, app_secret, base_token, table_id)
+    cameras: List[Camera] = batch_get_records(app_id, app_secret, base_token, camera_table_id)
 
     # 配置线程池，设置更大的容量（例如 20 个线程）
     executors = {
@@ -85,18 +84,18 @@ if __name__ == '__main__':
         
         # 添加定期任务，时间判断在任务函数内部进行
         if camera.key_frames == "开启":
-            # 为关键帧摄像头创建独立线程
-            import threading
-            thread = threading.Thread(target=key_frame_camera, args=(app_id, app_secret, app, skill, path, camera, False))  # 设置为使用多维表格
-            thread.daemon = True  # 使用daemon属性代替setDaemon()
-            thread.start()
+            scheduler.add_job(
+                key_frame_camera,
+                "date",
+                args=(app_id, app_secret, app, skill, path, camera, record_table_id, True)
+            )
         else:
             # 普通摄像头添加定时任务
             scheduler.add_job(
                 screenshot_camera,
                 "interval",
                 seconds=camera.frequency,
-                args=[app_id, app_secret, app, skill, path, camera, False],  # 设置为使用多维表格
+                args=(app_id, app_secret, app, skill, path, camera, record_table_id, True),  # 设置为使用多维表格
                 max_instances=5,
                 misfire_grace_time=300
         )
