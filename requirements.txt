@@ -1,7 +1,7 @@
 torch
 opencv-python
 numpy
-lark-oapi
+lark-oapi==1.4.23
 apscheduler
 requests-toolbelt
 blinker==1.9.0
