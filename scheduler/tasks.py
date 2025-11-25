@@ -9,65 +9,119 @@ from basic.model.camera import Camera
 from channel.yolo.yolov5 import identify
 from source.screenshot import fullscreen
 from source.surveillance import camera_screen
+from basic.util.timeutil import get_timestamp
 
 
-def get_timestamp():
-    """获取格式化的时间戳，用于日志输出"""
-    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+# 统一使用 basic.util.timeutil.get_timestamp
 
-def is_work_time(start_time, end_time):
-    """
-    判断当前时间是否在工作时间范围内
-    
-    Args:
-        start_time: 开始时间戳（毫秒或秒级）
-        end_time: 结束时间戳（毫秒或秒级）
-        
-    Returns:
-        bool: True表示在工作时间内，False表示不在工作时间内
-    """
-    # 无时间配置时默认为工作时间
-    if not start_time or not end_time:
-        print(f"[{get_timestamp()}] 警告：摄像头未配置工作时间，默认为工作时间")
+def _normalize_time_str(s):
+    """规范化时间字符串，兼容全角字符（冒号、数字、空格）。"""
+    if s is None:
+        return None
+    s = str(s).strip()
+    # 全角数字与符号映射到半角
+    fullwidth_digits = "０１２３４５６７８９"
+    halfwidth_digits = "0123456789"
+    trans_map = str.maketrans({
+        "：": ":",   # 全角冒号 → 半角
+        "　": " ",   # 全角空格 → 半角空格
+        **{fw: hw for fw, hw in zip(fullwidth_digits, halfwidth_digits)}
+    })
+    return s.translate(trans_map)
+
+def _parse_hhmm(time_str):
+    """解析 'HH:MM' 或 'H' 形式为 (hour, minute)。解析失败返回 (None, None)。"""
+    norm = _normalize_time_str(time_str)
+    if not norm:
+        return None, None
+    parts = norm.split(":") if ":" in norm else [norm]
+    try:
+        h = int(parts[0])
+    except Exception:
+        return None, None
+    m = 0
+    if len(parts) > 1:
+        try:
+            m = int(parts[1])
+        except Exception:
+            m = 0
+    # 基本范围校验
+    if not (0 <= h < 24) or not (0 <= m < 60):
+        return None, None
+    return h, m
+
+def _parse_duration_hours(val):
+    """解析工作时长为浮点小时，支持数字与字符串（兼容全角数字）。失败返回 None。"""
+    if isinstance(val, (int, float)):
+        num = float(val)
+    else:
+        s = _normalize_time_str(val)
+        if not s:
+            return None
+        try:
+            num = float(s)
+        except Exception:
+            return None
+    return num if num > 0 else None
+
+def _is_number_like(val):
+    """判断一个值是否可被当作数字解析（int/float 字符串）"""
+    try:
+        float(val)
         return True
-    
-    # 获取当前时间
+    except Exception:
+        return False
+
+def is_work_time(start_time, duration_hours):
+    """
+    新版工作时间判断：
+    - start_time: 'HH:MM' 字符串
+    - duration_hours: 工作时长（小时，支持 int/float/数字字符串）
+    """
+    if start_time is None or duration_hours is None:
+        print(f"[{get_timestamp()}] 警告：摄像头未配置开始时间或工作时长，默认为工作时间")
+        return True
+
     now = datetime.datetime.now()
     current_time = now.time()
-    
+
     try:
-        # 解析时间戳，支持毫秒和秒级
-        try:
-            # 尝试毫秒级时间戳
-            start_dt = datetime.datetime.fromtimestamp(int(start_time) / 1000)
-            end_dt = datetime.datetime.fromtimestamp(int(end_time) / 1000)
-        except:
-            # 尝试秒级时间戳
-            start_dt = datetime.datetime.fromtimestamp(int(start_time))
-            end_dt = datetime.datetime.fromtimestamp(int(end_time))
-        
-        # 提取工作时间范围
+        # 解析开始时间（兼容全/半角）
+        start_h, start_m = _parse_hhmm(start_time)
+        # 同时校验小时与分钟，避免 None 传入 datetime.time()
+        if start_h is None or start_m is None:
+            print(f"[{get_timestamp()}] 开始时间格式错误或超出范围: {start_time}")
+            return True
+
+        # 解析工作时长（小时）
+        dur = _parse_duration_hours(duration_hours)
+        if dur is None:
+            print(f"[{get_timestamp()}] 工作时长配置异常: {duration_hours}")
+            return True
+
+        start_dt = datetime.datetime.combine(now.date(), datetime.time(hour=start_h, minute=start_m))
+        end_dt = start_dt + datetime.timedelta(hours=dur)
         start_time_today = start_dt.time()
         end_time_today = end_dt.time()
-        
-        # 判断当前时间是否在工作时间范围内
+
         if start_time_today <= end_time_today:
-            # 同一天内的时间范围
             in_range = start_time_today <= current_time <= end_time_today
         else:
-            # 跨天的时间范围
             in_range = current_time >= start_time_today or current_time <= end_time_today
-            
-        print(f"[{get_timestamp()}] 工作时间检查: 当前{current_time}, 范围{start_time_today}-{end_time_today}, 结果:{'在' if in_range else '不在'}范围内")
+
+        print(f"[{get_timestamp()}] 工作时间检查(开始+时长): 当前{current_time}, 范围{start_time_today}-{end_time_today}, 时长{dur}h, 结果:{'在' if in_range else '不在'}范围内")
         return in_range
-        
     except Exception as e:
-        print(f"[{get_timestamp()}] 时间戳解析失败: {str(e)}")
-        return False
+        print(f"[{get_timestamp()}] 工作时间解析失败: {str(e)}")
+        return True
 
 
 # 批量截取图片
-def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily=True):
+
+# user_aily抽到ini里面
+
+def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily, base_token, camera_table_id, record_table_id, capture_source):
+
     # 检查工作时间
     if not is_work_time(camera.start_time, camera.end_time):
         print(f"[{get_timestamp()}] 摄像头 {camera.code} 非工作时间，跳过执行截图任务")
@@ -79,15 +133,24 @@ def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Ca
 
     # 循环几次
     for i in range(camera.count):
-        # 截取图片
-        file_name = camera_screen(camera.link, path)
+        # 按配置源抓帧
+        if capture_source == 'screenshot':
+            file_name = fullscreen(path)
+        else:
+            file_name = camera_screen(camera.link, path)
 
-        # file_name = fullscreen(path)
+        # 如截图失败，跳过本次循环
+        if not file_name:
+            print(f"[{get_timestamp()}] 截图失败，未生成文件，跳过本次上传")
+            continue
+
         print(file_name)
 
         # 根据参数决定是上传到aily还是保存文件路径
         if use_aily:
-            filenames.append(upload_file(token, file_name))
+            uploaded_id = upload_file(token, file_name)
+            if uploaded_id:
+                filenames.append(uploaded_id)
         else:
             # 保存原始文件路径用于上传到多维表格
             filenames.append(file_name)
@@ -97,18 +160,18 @@ def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Ca
             time.sleep(camera.frequency/camera.count)
     # 根据参数决定执行aily技能还是上传到多维表格
     if use_aily:
-        # 执行aily技能
-        resp = run_aily_skill(aily_app, aily_skill, filenames, camera.code, token)
-        print(resp)
+        # 过滤无效文件ID
+        valid_files = [f for f in filenames if f]
+        if valid_files:
+            resp = run_aily_skill(aily_app, aily_skill, valid_files, camera.code, token)
+            print(resp)
+        else:
+            print(f"[{get_timestamp()}] 无有效文件ID，跳过技能触发")
+    # 下面这个地方放到环境变量
     else:
-        # 上传到多维表格
-        from basic.util.configurator import get_aily_env
-        # 获取配置信息，特别是多维表格的token
-        _, _, base_token, camera_table_id, record_table_id, _, _ = get_aily_env()
-
-        
+        # 上传到多维表格（使用入口传入的配置）
         print(f"[{get_timestamp()}] 将图片上传到多维表格")
-        for file_name in filenames:
+        for file_name in [f for f in filenames if f]:
             # 使用我们测试成功的新方法
             success = upload_image_to_bitable(
                 base_token,  # 多维表格的 app_token
@@ -119,7 +182,7 @@ def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Ca
             )
             print(f"[{get_timestamp()}] 图片上传{'成功' if success else '失败'}: {file_name}")
             # 上传后删除本地文件
-            if success and os.path.exists(file_name):
+            if success and file_name and os.path.exists(file_name):
                 os.remove(file_name)
 
 # 从test_upload.py移植过来的，经过验证的上传函数
@@ -249,7 +312,7 @@ def upload_image_to_bitable(app_token, table_id, file_path, token, inspection_po
 
 
 
-def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily=True):
+def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily, base_token, camera_table_id, record_table_id, capture_source):
     print(f"[{get_timestamp()}] 间隔任务执行：关键帧检测")
     token = get_tenant_token(app_id, app_secret)
 
@@ -260,9 +323,17 @@ def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Cam
             time.sleep(3)
             continue
             
-        # 截取图片
-        file_name = camera_screen(camera.link, path)
-        # file_name = fullscreen(path)
+        # 按配置源抓帧
+        if capture_source == 'screenshot':
+            file_name = fullscreen(path)
+        else:
+            file_name = camera_screen(camera.link, path)
+        # 如截图失败，跳过本轮检测
+        if not file_name:
+            print(f"[{get_timestamp()}] 关键帧截图失败，跳过本轮")
+            time.sleep(3)
+            continue
+
         count = identify(file_name, camera.classes)
         print(f"检测到 {count} 个目标")
         print(file_name)
@@ -276,32 +347,24 @@ def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Cam
                 resp = run_aily_skill(aily_app, aily_skill, [filename], camera.code, token)
                 print(resp)
             else:
-                # 上传到多维表格
-                from basic.lark.base import update_record_with_file
-                from basic.util.configurator import get_aily_env
-                # 获取配置信息，特别是多维表格的token
-                # 上传到多维表格
-                from basic.util.configurator import get_aily_env
-                # 获取配置信息，特别是多维表格的token
-                _, _, base_token, camera_table_id, record_table_id, _, _ = get_aily_env()
-                print(f"[{get_timestamp()}] 将关键帧图片上传到多维表格，记录ID: {camera.record_id}")
+                # 上传到多维表格：创建记录并关联巡检点位（使用入口传入的配置）
+                print(f"[{get_timestamp()}] 将关键帧图片上传到多维表格，关联巡检点位记录ID: {camera.record_id}")
                 camera.frames_count = count
-                # 使用配置文件中的base_token和table_id
-                success = update_record_with_file(
-                    base_token,  # 使用多维表格的token
-                    camera_table_id,  # 使用配置文件中的table_id
-                    camera.record_id,
-                    "照片",  # 多维表格中的附件字段名称
+                success = upload_image_to_bitable(
+                    base_token,
+                    record_table_id,
                     file_name,
-                    token
+                    token,
+                    camera.record_id
                 )
                 print(f"[{get_timestamp()}] 关键帧图片上传{'成功' if success else '失败'}: {file_name}")
                 # 上传后删除本地文件
-                if os.path.exists(file_name):
+                if success and file_name and os.path.exists(file_name):
                     os.remove(file_name)
         else:
             # 删除图片
-            os.remove(file_name)
+            if file_name and os.path.exists(file_name):
+                os.remove(file_name)
 
         if count == 0:
             camera.frames_count = count

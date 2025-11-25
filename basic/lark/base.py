@@ -10,6 +10,29 @@ import json
 import lark_oapi as lark
 from lark_oapi.api.bitable.v1 import *
 
+def _extract_start_time(value):
+    """从多维表格字段解析开始时间字符串，如 '08:00'。
+    兼容返回为列表[{'text': '8:00'}]或直接字符串。"""
+    if isinstance(value, list) and value:
+        first = value[0]
+        if isinstance(first, dict):
+            return first.get('text') or first.get('value') or str(first)
+    return value
+
+def _extract_duration(value):
+    """从多维表格字段解析工作时长（小时），返回原始数值或字符串数字。
+    兼容返回为列表[{'number': 12}]或直接数值/字符串。"""
+    if isinstance(value, list) and value:
+        first = value[0]
+        if isinstance(first, dict):
+            num = first.get('number')
+            if num is not None:
+                return num
+            # 兼容 text 数字
+            txt = first.get('text')
+            return txt if txt is not None else str(first)
+    return value
+
 def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
     # 创建client
     client = lark.Client.builder() \
@@ -26,7 +49,7 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
         .page_token("" if page_token is None else page_token) \
         .page_size(10) \
         .request_body(SearchAppTableRecordRequestBody.builder()
-            .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集", "上班时间", "下班时间"])
+            .field_names(["编码", "link", "频率", "截取", "关键帧", "检测集", "开始时间", "工作时长"])
             .automatic_fields(True)
             .filter(FilterInfo.builder()
                .conjunction("and")
@@ -61,9 +84,9 @@ def batch_get_records(app_id, app_secret, base_id, table_id, page_token=None):
             )
             # 将record_id存储为实例属性，以便后续使用
             camera.record_id = item.record_id
-            # 存储上班时间和下班时间
-            camera.start_time = item.fields.get("上班时间")
-            camera.end_time = item.fields.get("下班时间")
+            # 存储开始时间与工作时长（新配置）
+            camera.start_time = _extract_start_time(item.fields.get("开始时间"))
+            camera.end_time = _extract_duration(item.fields.get("工作时长"))
             cameras.append(camera)
 
     return cameras
