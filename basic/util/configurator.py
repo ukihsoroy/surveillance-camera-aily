@@ -9,30 +9,32 @@ def get_aily_env():
     app_secret = config['aily']['app_secret']
     # 表格token、table id
     base_token = config['base']['token']
-    table_id = config['base']['table_id']
+    camera_table_id = config['base']['camera_table_id']
+    record_table_id = config['base']['record_table_id']
     # aily的app、skill
     app = config['aily']['app']
     skill = config['aily']['skill']
     # 本地文件夹目录地址
     path = config['app']['path']
 
-    # apaas的client id、secret
-    client_id = config['apaas']['client_id']
-    client_secret = config['apaas']['client_secret']
+    return app_id, app_secret, base_token, camera_table_id, record_table_id, app, skill, path
 
-    return app_id, app_secret, base_token, table_id, app, skill, path, client_id, client_secret
-
-
-def get_apaas_env():
-    # 读取配置文件
+def get_use_aily():
+    """从配置中读取是否走 Aily 上传（默认 True）"""
     config = configparser.ConfigParser()
     config.read('config.ini', encoding='utf-8')
-    # 本地文件夹目录地址
-    path = config['app']['path']
+    # 若不存在该键，默认 True 以保持原有行为
+    try:
+        return config.getboolean('app', 'use_aily')
+    except Exception:
+        return True
 
-    # apaas的client id、secret
-    client_id = config['apaas']['client_id']
-    client_secret = config['apaas']['client_secret']
-    namespace = config['apaas']['namespace']
-
-    return path, client_id, client_secret, namespace
+def get_capture_source():
+    """从配置中读取抓帧来源：'camera' 或 'screenshot'，默认 'camera'"""
+    config = configparser.ConfigParser()
+    config.read('config.ini', encoding='utf-8')
+    try:
+        value = config.get('app', 'capture_source', fallback='camera').strip().lower()
+        return value if value in ('camera', 'screenshot') else 'camera'
+    except Exception:
+        return 'camera'

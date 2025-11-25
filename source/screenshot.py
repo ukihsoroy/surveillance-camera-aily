@@ -1,11 +1,26 @@
 import random
 import time
+import os
 import pyautogui
+import configparser
 
 #截取屏幕
 #输入是截图保存地址
 #输出是截图文件名
-def fullscreen(path, region=None):
+def fullscreen(path=None, region=None):
+    # 若未传入路径，则尝试从配置读取；失败时回退到默认目录
+    if path is None:
+        try:
+            config = configparser.ConfigParser()
+            config.read('config.ini', encoding='utf-8')
+            path = config['app']['path']
+        except Exception:
+            path = './screenshot/'
+    # 确保保存目录存在
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        pass
     # 截取整个屏幕
     if region is None:
         screenshot = pyautogui.screenshot()
@@ -28,5 +43,4 @@ def fullscreen(path, region=None):
 
 if __name__ == '__main__':
     name = fullscreen()
-
     print(name)
