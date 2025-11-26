@@ -1,6 +1,7 @@
 from typing import List
-import datetime
-import importlib
+
+from apscheduler.executors.pool import ThreadPoolExecutor
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 from basic.lark.base import batch_get_records
 from basic.model.camera import Camera
@@ -25,14 +26,13 @@ if __name__ == '__main__':
     # 获取监控配置信息
     cameras: List[Camera] = batch_get_records(app_id, app_secret, base_token, camera_table_id)
 
-    # 创建调度器（BlockingScheduler会阻塞主线程），使用动态导入以避免解析阶段导入错误
-    try:
-        blocking_module = importlib.import_module('apscheduler.schedulers.blocking')
-        BlockingScheduler = getattr(blocking_module, 'BlockingScheduler')
-        scheduler = BlockingScheduler()
-    except Exception:
-        print("未检测到 apscheduler，启动将失败。请先安装依赖：pip install apscheduler")
-        raise
+    # 配置线程池，设置更大的容量（例如 20 个线程）
+    executors = {
+        'default': ThreadPoolExecutor(20)  # 调整此处数值
+    }
+
+    # 创建调度器（BlockingScheduler会阻塞主线程）
+    scheduler = BlockingScheduler(executors=executors)
 
     print(f"[{get_timestamp()}] 共获取到 {len(cameras)} 个摄像头配置")
 
