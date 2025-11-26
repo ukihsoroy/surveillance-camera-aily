@@ -25,7 +25,7 @@ def get_use_aily():
     config.read('config.ini', encoding='utf-8')
     # 若不存在该键，默认 True 以保持原有行为
     try:
-        return config.getboolean('app', 'use_aily')
+        return config.getboolean('aily', 'use_aily')
     except Exception:
         return True
 
