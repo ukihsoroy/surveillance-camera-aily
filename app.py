@@ -60,7 +60,6 @@ if __name__ == '__main__':
                 kwargs={
                     "use_aily": use_aily,
                     "base_token": base_token,
-                    "camera_table_id": camera_table_id,
                     "record_table_id": record_table_id,
                     "capture_source": capture_source,
                 }
@@ -76,7 +75,6 @@ if __name__ == '__main__':
                 kwargs={
                     "use_aily": use_aily,
                     "base_token": base_token,
-                    "camera_table_id": camera_table_id,
                     "record_table_id": record_table_id,
                     "capture_source": capture_source,
                 },

@@ -96,7 +96,7 @@ def is_work_time(start_time, duration_hours):
 
 # user_aily抽到ini里面
 
-def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily, base_token, camera_table_id, record_table_id, capture_source):
+def screenshot_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily, base_token, record_table_id, capture_source):
 
     # 检查工作时间
     if not is_work_time(camera.start_time, camera.end_time):
@@ -291,7 +291,7 @@ def upload_image_to_bitable(app_token, table_id, file_path, token, inspection_po
 
 
 
-def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily, base_token, camera_table_id, record_table_id, capture_source):
+def key_frame_camera(app_id, app_secret, aily_app, aily_skill, path, camera: Camera, use_aily, base_token, record_table_id, capture_source):
     print(f"[{get_timestamp()}] 间隔任务执行：关键帧检测")
     token = get_tenant_token(app_id, app_secret)
 

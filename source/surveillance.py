@@ -39,9 +39,6 @@ def camera_screen(link, path):
 
 import configparser
 if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    config.read('config.ini')
-    ip = config['camera']['ip']
-    path = config['app']['path']
-    name = camera_screen(ip, path)
+
+    name = camera_screen("rtsp://admin:admin12345@192.168.1.64:554/Streaming/Channels/101", "./")
     print(name)
